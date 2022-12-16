@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Xplor</string>
+    <string name="mapbox_access_token">pk.eyJ1IjoieHBsb3ItbWFpbiIsImEiOiJjbGJvOGQzdjYwMGl2M3ltd2szZHEyZWVjIn0.BT_SGM3W_eqL5JkgQ4v4iQ</string>
+</resources>
