@@ -1,37 +1,36 @@
 package com.xplor.app
 
 
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
+import android.graphics.Color
+import android.graphics.PointF
 import android.location.Location
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.graphics.createBitmap
-import androidx.core.graphics.get
-import androidx.core.graphics.set
+import com.google.gson.JsonElement
+import com.mapbox.geojson.*
 import com.mapbox.mapboxsdk.Mapbox
-import com.mapbox.mapboxsdk.geometry.LatLng
-import com.mapbox.mapboxsdk.geometry.LatLngQuad
 import com.mapbox.mapboxsdk.maps.MapView
 import com.mapbox.mapboxsdk.maps.MapboxMap
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback
 import com.mapbox.mapboxsdk.maps.Style
-import com.mapbox.mapboxsdk.style.layers.RasterLayer
-import com.mapbox.mapboxsdk.style.sources.ImageSource
+import com.mapbox.mapboxsdk.style.layers.FillLayer
+import com.mapbox.mapboxsdk.style.layers.LineLayer
+import com.mapbox.mapboxsdk.style.layers.PropertyFactory
+import com.mapbox.mapboxsdk.style.sources.GeoJsonSource
+import com.mapbox.mapboxsdk.style.sources.VectorSource.*
 import com.mapbox.navigation.core.trip.session.LocationMatcherResult
 import com.mapbox.navigation.core.trip.session.LocationObserver
 import com.mapbox.navigation.ui.maps.location.NavigationLocationProvider
-import com.zaxxer.sparsebits.SparseBitSet
+import java.io.InputStream
 
-
-public var mapView: MapView? = null
 
 private const val ID_IMAGE_SOURCE = "image_source-id"
 private const val ID_IMAGE_LAYER = "image_layer-id"
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
-
+    public var mapView: MapView? = null
+    public var mapboxMap: MapboxMap? = null
 
     val navigationLocationProvider = NavigationLocationProvider()
 
@@ -65,11 +64,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-
-
-
         Mapbox.getInstance(this, getString(R.string.mapbox_access_token));
-
         // Display Basic Map
 
 
@@ -111,61 +106,84 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         mapView?.getMapAsync(this)
 
 
-
     }
+
     @Override
     override fun onMapReady(mapboxMap: MapboxMap) {
-        var bitmap = BitmapFactory.decodeResource(resources, R.drawable.square)
+        //var bitmap = BitmapFactory.decodeResource(resources, R.drawable.geo_square)
+        var geoJson: String
+        val routeCoordinates = ArrayList<Point>()
+        routeCoordinates.add(Point.fromLngLat(-118.394391, 33.397676))
+        routeCoordinates.add(Point.fromLngLat(-118.370917, 33.391142))
 
-        mapboxMap.setStyle(
-            Style.DARK
-        ) { style -> // Set the latitude and longitude values for the image's four corners
-            /*val Bigquad = LatLngQuad(
-                LatLng(28.60, -81.30),
-                LatLng(28.70, -81.30),
-                LatLng(28.70, -81.20),
-                LatLng(28.60, -81.20)
-                )*/
+        val lineString = LineString.fromLngLats(routeCoordinates)
 
-            val quad = LatLngQuad(
-                LatLng(28.604297, -81.199357),
-                LatLng(28.604052, -81.198778),
-                LatLng(28.603411, -81.199105),
-                LatLng(28.603703, -81.199776)
-            )
-                // Add an ImageSource to the map
-                style.addSource(
-                    ImageSource(
-                        ID_IMAGE_SOURCE,
-                        quad,
-                        bitmap
-                    )
+        val feature2 = Feature.fromGeometry(lineString)
+        mapboxMap.setStyle(Style.DARK)
+
+        mapboxMap.getStyle {
+            val feature = readJSONFromAsset("foggrid.geojson")?.let {
+                FeatureCollection.fromJson(
+                    it
                 )
-
-
-
-                // Create a raster layer and use the imageSource's ID as the layer's data. Then add a RasterLayer to the map.
-                style.addLayer(
-                    RasterLayer(
-                        ID_IMAGE_LAYER,
-                        ID_IMAGE_SOURCE
-                )
-            )
-        }
-    }
-
-    fun bitmapFromArray(pixels2d: Array<IntArray>): Bitmap {
-        val width = pixels2d.size
-        val height = pixels2d[0].size
-        val pixels = IntArray(width * height)
-        var pixelsIndex = 0
-        for (i in 0 until width) {
-            for (j in 0 until height) {
-                pixels[pixelsIndex] = pixels2d[i][j]
-                pixelsIndex++
             }
+
+            Log.d("sus", feature.toString())
+            it.addSource(GeoJsonSource("fog-source", feature))
+
+            it.addLayer(
+                FillLayer("fog-layer", "fog-source")
+                .withProperties(
+                    PropertyFactory.fillColor(Color.parseColor("#FFFFFF"))))
+
+            it.addLayer(LineLayer("fog-outline", "fog-source").withProperties(
+                PropertyFactory.lineColor(Color.parseColor("#000000")),
+                PropertyFactory.lineWidth(1f)))
+
+
         }
-        return Bitmap.createBitmap(pixels, width, height, Bitmap.Config.ALPHA_8)
+
+        mapboxMap.addOnMapClickListener { point ->
+            val userClickLocation = PointF(point.latitude.toFloat(), point.longitude.toFloat())
+            val pixel = mapboxMap.projection.toScreenLocation(point)
+            Log.d("sus", String.format("User clicked at: %s", point.toString()))
+            val features =
+                mapboxMap.queryRenderedFeatures(pixel)
+            if(features.isNotEmpty()) {
+                Log.d("sus", "yeeeeeeeeeee!")
+                Log.d("sus", features.toString())
+                features.get(0).addStringProperty("fill-color", "#FF0000")
+            }
+            true
+        }
+        }
+
+        /*fun decodeGeoJSON(filename: String) {
+            var featureCollection: FeatureCollection = FeatureCollection(readJSONFromAsset(filename))
+            var data: String?
+
+            val filePath = URL(filename)
+            try {
+                data = readJSONFromAsset(filename)
+                featureCollection = data
+            } catch (e: Exception) {
+                Log.d("sus", e.toString())
+            }
+        }*/
+
+    private fun readJSONFromAsset(filename: String): String? {
+        var json: String? = null
+        try {
+            val  inputStream:InputStream = assets.open(filename)
+            json = inputStream.bufferedReader().use{it.readText()}
+        } catch (ex: Exception) {
+            ex.printStackTrace()
+            return null
+        }
+        return json
     }
 }
+
+
+
 
