@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId "com.xplor.app"
-        minSdk 21
+        minSdk 24
         targetSdk 33
         versionCode 1
         versionName "1.0"
@@ -45,7 +45,7 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.4'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.0'
-    implementation 'com.mapbox.mapboxsdk:mapbox-android-sdk:9.6.1'
+    implementation 'com.mapbox.maps:android:10.2.0'
     implementation 'com.mapbox.mapboxsdk:mapbox-sdk-services:6.10.0-beta.3'
     implementation 'com.mapbox.mapboxsdk:mapbox-sdk-core:6.10.0-beta.3'
     implementation 'com.mapbox.mapboxsdk:mapbox-sdk-geojson:6.10.0-beta.3'
@@ -61,4 +61,5 @@ dependencies {
     implementation 'com.zaxxer:SparseBitSet:1.2'
     implementation 'com.squareup.retrofit2:retrofit:2.9.0'
     implementation 'com.squareup.retrofit2:converter-moshi:2.9.0'
+    implementation 'com.mapbox.mapboxsdk:mapbox-sdk-turf:6.9.0'
 }
